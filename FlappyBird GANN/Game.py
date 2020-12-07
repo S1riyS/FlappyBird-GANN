@@ -71,16 +71,15 @@ class Bird(pygame.sprite.Sprite):
 
     def get_score(self):
         for tower in tower_sprites:
+            #print([i.score for i in bird_sprites])
             if tower.rect.x < self.rect.x:
-                current_birds_count = len([i for i in bird_sprites])
-                if tower.is_counted < current_birds_count and tower.tag == "bottom":
+                if self.index not in tower.counted_birds and tower.tag == "bottom":
                     self.score += 1
-                    tower.is_counted += 1
+                    tower.counted_birds.append(self.index)
+                    break
 
     def dead(self):
-        self.fit = (
-            self.score * self.tower_interval - (self.x_dist + 3 * TOWER_WIDTH // 2)
-        ) / 10
+        self.fit = ((self.score * self.tower_interval - self.x_dist) + 1.1) * 10
         BIRDS_RESULTS.append((self.fit, self.index))
         self.kill()
 
@@ -91,19 +90,18 @@ class Bird(pygame.sprite.Sprite):
         #         self.count = self.jump_power
         #         self.gravity = GRAVITY
 
-        if (
-            Networks[self.index].query(self.normalization(self.rect.x, self.rect.y))
-            > 0.6
-        ):
+        if Networks[self.index].query(self.normalization(self.rect.x, self.rect.y)) > 0.6:
             self.jump = True
             self.count = JUMP_POWER
             self.gravity = GRAVITY
+
+        self.get_score()
         # Стлокновение с трубой
         hits = pygame.sprite.spritecollide(self, tower_sprites, False)
         if hits:
             self.life = False
+
         if self.life:
-            self.get_score()
             if 0 < self.rect.y and self.rect.y + self.height < HEIGHT:
                 if self.count >= -JUMP_POWER and self.jump:
                     self.rect.y -= self.count
@@ -131,7 +129,7 @@ class Tower(pygame.sprite.Sprite):
 
         self.speed = speed
 
-        self.is_counted = 0
+        self.counted_birds = []
         self.tag = tag
 
     def update(self, *args):
@@ -219,12 +217,13 @@ class GameController:
 
     def restart(self):
         self.genetic.new_generation(BIRDS_RESULTS)
+        print(sorted(BIRDS_RESULTS, key=lambda x: x[0]))
 
         Networks.clear()
         # Если максимальный результат текущй популяции меньше, чем -4,
         # то задаем всем птицам случайные весовые коэффициенты
         max_fit = max([i[0] for i in BIRDS_RESULTS])
-        if max_fit < -4:
+        if max_fit < 3:
             is_random_generated = True
         else:
             is_random_generated = False

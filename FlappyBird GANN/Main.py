@@ -1,7 +1,13 @@
 import sys
 
 from PyQt5 import uic, QtGui
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QSpinBox, QCheckBox
+from PyQt5.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QPushButton,
+    QSpinBox,
+    QCheckBox
+)
 
 
 class MyWidget(QMainWindow):

@@ -23,34 +23,41 @@ class GeneticAlgorithm:
         self.onodes = output_nodes
 
     def cross(self, father, mother):
-        self.father_NN = self.network[father[1]]
-        self.mother_NN = self.network[mother[1]]
-        self.child = []
+        father, mother = sorted((father, mother), key=lambda x: x[0], reverse=True)
+        father_NN = self.network[father[1]]
+        mother_NN = self.network[mother[1]]
+        child = []
 
-        self.father_wih = self.father_NN.wih.flatten()
-        self.father_who = self.father_NN.who.flatten()
+        father_wih = father_NN.wih.flatten()
+        father_who = father_NN.who.flatten()
 
-        self.mother_wih = self.mother_NN.wih.flatten()
-        self.mother_who = self.mother_NN.who.flatten()
+        mother_wih = mother_NN.wih.flatten()
+        mother_who = mother_NN.who.flatten()
 
-        self.father = numpy.concatenate([self.father_wih, self.father_who])
-        self.mother = numpy.concatenate([self.mother_wih, self.mother_who])
+        father_fit, mother_fit = father[0], mother[0]
+        domination_value = max(abs(father_fit // max(1, mother_fit)), 2)
 
-        for i in range(len(self.father)):
-            if i % 2 == 0:
-                chromosome = self.mother[i]
+        print(f'Father: fit - {father_fit}, index - {father[1] + 1}; Mother: fit - {mother_fit}, index - {mother[1] + 1}, Domination - {domination_value}')
+
+        father = numpy.concatenate([father_wih, father_who])
+        mother = numpy.concatenate([mother_wih, mother_who])
+
+        for i in range(len(father)):
+            if i % domination_value == 0:
+                chromosome = mother[i]
             else:
-                chromosome = self.father[i]
+                chromosome = father[i]
 
             # Мутация гена
             if random.uniform(1, 100) < self.mutation_chance:
                 chromosome += random.uniform(-0.5, 0.5)
-            self.child.append(chromosome)
+            child.append(chromosome)
+
         return (
-            numpy.array(self.child[:self.inodes * self.hnodes]).reshape(
+            numpy.array(child[:self.inodes * self.hnodes]).reshape(
                 (self.hnodes, self.inodes)
             ),
-            numpy.array(self.child[self.inodes * self.hnodes:]).reshape(
+            numpy.array(child[self.inodes * self.hnodes:]).reshape(
                 (self.onodes, self.hnodes)
             )
         )
@@ -68,15 +75,19 @@ class GeneticAlgorithm:
                 wih=self.network[bird[1]].wih,
                 who=self.network[bird[1]].who,
             )
-        best_birds = sorted(results, key=lambda x: x[0], reverse=True)[
-            : self.bird_count // 2
-        ]
+        best_birds = sorted(results, key=lambda x: x[0], reverse=True)[:self.bird_count // 2]
         # Скрещивание лучшей пары
         best_couple = self.cross(best_birds[-1], best_birds[-2])
         children.append(best_couple)
         # Случайные скрещивания
         for i in range(self.cross_count - 1):
-            couple = self.cross(random.choice(best_birds), random.choice(best_birds))
+            father = random.choice(best_birds)
+            mother = random.choice(best_birds)
+            while father[1] == mother[1]:
+                father = random.choice(best_birds)
+                mother = random.choice(best_birds)
+
+            couple = self.cross(father, mother)
             children.append(couple)
         # Сохранение результатов скрещивания
         for index, bird in enumerate(children):
